@@ -1,0 +1,73 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+}
+
+model Job {
+  id               String        @id @default(uuid())
+  title            String
+  company          String
+  logo             String
+  country          String
+  city             String
+  salary           String
+  experience       String
+  category         String
+  employmentType   String
+  vacancies        Int           @default(1)
+  description      String
+  responsibilities String
+  requirements     String
+  benefits         String
+  featured         Boolean       @default(false)
+  urgent           Boolean       @default(false)
+  publishedDate    String
+  expiryDate       String
+  status           String        @default("published") // "published", "draft", "archived", "closed"
+  createdAt        DateTime      @default(now())
+
+  @@index([status])
+  @@index([category])
+}
+
+model Blog {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  content     String
+  image       String
+  seo         String
+  readingTime String
+  draft       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([slug])
+  @@index([draft])
+}
+
+model Settings {
+  id                     String @id @default("default")
+  siteName               String @default("Hyrnex")
+  contactEmail           String @default("hello@hyrnex.com")
+  contactPhone           String @default("+1 (555) 019-2834")
+  address                String @default("100 Pine Street, San Francisco, CA 94111")
+  linkedinUrl            String @default("https://linkedin.com/company/hyrnex")
+  githubUrl              String @default("https://github.com/hyrnex")
+  twitterUrl             String @default("https://twitter.com/hyrnex")
+  cloudinaryCloudName    String @default("")
+  cloudinaryUploadPreset String @default("")
+}

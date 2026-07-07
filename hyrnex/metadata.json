@@ -1,0 +1,6 @@
+{
+  "name": "Hyrnex",
+  "description": "Premium full-stack recruitment SaaS platform - Your Career Starts Here.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
