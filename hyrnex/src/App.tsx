@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { Job, Blog, Settings } from './types';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -27,8 +28,8 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState<string>('home');
-  const [currentParams, setCurrentParams] = useState<Record<string, any>>({});
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Core Platform Data State
@@ -117,17 +118,46 @@ function AppContent() {
   }, [adminToken, fetchAllData]);
 
   // --- ACTIONS ---
-  const handleNavigate = (page: string, params: Record<string, any> = {}) => {
-    setCurrentPage(page);
-    setCurrentParams(params);
+  const handleNavigate = useCallback((page: string, params: Record<string, any> = {}) => {
+    if (page === 'home') {
+      navigate('/');
+    } else if (page === 'jobs') {
+      if (params.search) {
+        navigate(`/jobs?search=${encodeURIComponent(params.search)}`);
+      } else {
+        navigate('/jobs');
+      }
+    } else if (page === 'job-details') {
+      navigate(`/jobs/${params.jobId || ''}`);
+    } else if (page === 'about') {
+      navigate('/about');
+    } else if (page === 'blog') {
+      if (params.slug) {
+        navigate(`/blog/${params.slug}`);
+      } else {
+        navigate('/blog');
+      }
+    } else if (page === 'blog-details') {
+      navigate(`/blog/${params.slug || ''}`);
+    } else if (page === 'contact') {
+      navigate('/contact');
+    } else if (page === 'privacy') {
+      navigate('/privacy');
+    } else if (page === 'terms') {
+      navigate('/terms');
+    } else if (page === 'admin-login') {
+      navigate('/admin');
+    } else if (page === 'admin-dashboard') {
+      navigate('/admin-dashboard');
+    }
     window.scrollTo({ top: 0 });
-  };
+  }, [navigate]);
 
   const handleLoginSuccess = (token: string, user: { email: string; name: string }) => {
     localStorage.setItem('hyrnex_admin_token', token);
     setAdminToken(token);
     setAdminUser(user);
-    handleNavigate('admin-dashboard');
+    navigate('/admin-dashboard');
   };
 
   const handleLogout = async () => {
@@ -144,109 +174,28 @@ function AppContent() {
     setAdminToken(null);
     setAdminUser(null);
     toast('Logged out successfully.', 'info');
-    handleNavigate('home');
+    navigate('/');
   };
 
-  // --- RENDERING PAGE CONTENT ---
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case 'home':
-        return <Home onNavigate={handleNavigate} jobs={jobs} blogs={blogs} />;
-      
-      case 'jobs':
-        return (
-          <Jobs
-            jobs={jobs}
-            onNavigate={handleNavigate}
-            initialSearch={currentParams.search || ''}
-          />
-        );
-      
-      case 'job-details':
-        return (
-          <JobDetails
-            jobId={currentParams.jobId || ''}
-            jobs={jobs}
-            onNavigate={handleNavigate}
-          />
-        );
-      
-      case 'about':
-        return <About onNavigate={handleNavigate} />;
-      
-      case 'blog':
-        return (
-          <CareerBlog
-            blogs={blogs}
-            onNavigate={handleNavigate}
-            selectedSlug={currentParams.slug || ''}
-          />
-        );
-      
-      case 'blog-details':
-        return (
-          <CareerBlog
-            blogs={blogs}
-            onNavigate={handleNavigate}
-            selectedSlug={currentParams.slug || ''}
-          />
-        );
-      
-      case 'contact':
-        return <Contact />;
-      
-      case 'privacy':
-        return <PrivacyTerms view="privacy" />;
-      
-      case 'terms':
-        return <PrivacyTerms view="terms" />;
-      
+  // Route wrapper components
+  const JobsRoute = () => {
+    const [searchParams] = useSearchParams();
+    const search = searchParams.get('search') || '';
+    return <Jobs jobs={jobs} onNavigate={handleNavigate} initialSearch={search} />;
+  };
 
-      case 'admin-login':
-        return adminToken ? (
-          <AdminDashboard
-            token={adminToken}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-            jobs={jobs}
-            blogs={blogs}
-            settings={settings}
-            onRefreshData={fetchAllData}
-          />
-        ) : (
-          <AdminLogin onLoginSuccess={handleLoginSuccess} onNavigate={handleNavigate} />
-        );
-      
-      case 'admin-dashboard':
-        return adminToken ? (
-          <AdminDashboard
-            token={adminToken}
-            onLogout={handleLogout}
-            onNavigate={handleNavigate}
-            jobs={jobs}
-            blogs={blogs}
-            settings={settings}
-            onRefreshData={fetchAllData}
-          />
-        ) : (
-          <AdminLogin onLoginSuccess={handleLoginSuccess} onNavigate={handleNavigate} />
-        );
-      
-      default:
-        return (
-          <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
-            <AlertCircle className="w-12 h-12 text-neutral-400 mx-auto animate-bounce" />
-            <h2 className="text-xl font-bold text-neutral-800">404 - Page Not Found</h2>
-            <p className="text-sm text-neutral-500">The career page you are seeking does not exist or was shifted.</p>
-            <button
-              onClick={() => handleNavigate('home')}
-              className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl cursor-pointer"
-            >
-              Return Home
-            </button>
-          </div>
-        );
-    }
+  const JobDetailsRoute = () => {
+    const { id } = useParams();
+    return <JobDetails jobId={id || ''} jobs={jobs} onNavigate={handleNavigate} />;
+  };
+
+  const BlogRoute = () => {
+    return <CareerBlog blogs={blogs} onNavigate={handleNavigate} selectedSlug="" />;
+  };
+
+  const BlogDetailsRoute = () => {
+    const { slug } = useParams();
+    return <CareerBlog blogs={blogs} onNavigate={handleNavigate} selectedSlug={slug || ''} />;
   };
 
   // Global Loader
@@ -261,14 +210,28 @@ function AppContent() {
     );
   }
 
-  const isDashboard = currentPage === 'admin-dashboard';
+  const getMappedPageName = (pathname: string) => {
+    if (pathname === '/') return 'home';
+    if (pathname.startsWith('/jobs')) return 'jobs';
+    if (pathname === '/about') return 'about';
+    if (pathname.startsWith('/blog')) return 'blog';
+    if (pathname === '/contact') return 'contact';
+    if (pathname === '/privacy') return 'privacy';
+    if (pathname === '/terms') return 'terms';
+    if (pathname === '/admin') return 'admin-login';
+    if (pathname === '/admin-dashboard') return 'admin-dashboard';
+    return '';
+  };
+
+  const currentMappedPage = getMappedPageName(location.pathname);
+  const isDashboard = location.pathname === '/admin-dashboard';
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col justify-between selection:bg-blue-500 selection:text-white">
       {/* Conditionally render public header navbar */}
       {!isDashboard && (
         <Navbar
-          currentPage={currentPage}
+          currentPage={currentMappedPage}
           onNavigate={handleNavigate}
           isAdminLoggedIn={!!adminToken}
           onLogout={handleLogout}
@@ -277,7 +240,61 @@ function AppContent() {
 
       {/* Primary Page viewport */}
       <main className="flex-grow">
-        {renderCurrentPage()}
+        <Routes>
+          <Route path="/" element={<Home onNavigate={handleNavigate} jobs={jobs} blogs={blogs} />} />
+          <Route path="/jobs" element={<JobsRoute />} />
+          <Route path="/jobs/:id" element={<JobDetailsRoute />} />
+          <Route path="/about" element={<About onNavigate={handleNavigate} />} />
+          <Route path="/blog" element={<BlogRoute />} />
+          <Route path="/blog/:slug" element={<BlogDetailsRoute />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<PrivacyTerms view="privacy" />} />
+          <Route path="/terms" element={<PrivacyTerms view="terms" />} />
+          <Route 
+            path="/admin" 
+            element={
+              adminToken ? (
+                <Navigate to="/admin-dashboard" replace />
+              ) : (
+                <AdminLogin onLoginSuccess={handleLoginSuccess} onNavigate={handleNavigate} />
+              )
+            } 
+          />
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              adminToken ? (
+                <AdminDashboard
+                  token={adminToken}
+                  onLogout={handleLogout}
+                  onNavigate={handleNavigate}
+                  jobs={jobs}
+                  blogs={blogs}
+                  settings={settings}
+                  onRefreshData={fetchAllData}
+                />
+              ) : (
+                <Navigate to="/admin" replace />
+              )
+            } 
+          />
+          <Route 
+            path="*" 
+            element={
+              <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
+                <AlertCircle className="w-12 h-12 text-neutral-400 mx-auto animate-bounce" />
+                <h2 className="text-xl font-bold text-neutral-800">404 - Page Not Found</h2>
+                <p className="text-sm text-neutral-500">The career page you are seeking does not exist or was shifted.</p>
+                <button
+                  onClick={() => handleNavigate('home')}
+                  className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl cursor-pointer"
+                >
+                  Return Home
+                </button>
+              </div>
+            } 
+          />
+        </Routes>
       </main>
 
       {/* Conditionally render public footer */}
@@ -297,7 +314,9 @@ function AppContent() {
 export default function App() {
   return (
     <ToastProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </ToastProvider>
   );
 }
